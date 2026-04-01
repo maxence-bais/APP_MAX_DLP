@@ -1,333 +1,264 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DLP</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        :root {
-            --bg: #0f172a; --card: #1e293b; --border: #334155; --white: #f8fafc;
-            --t1: #f8fafc; --t2: #94a3b8; --t3: #64748b;
-            --green: #22c55e; --yellow: #eab308; --orange: #f97316; --red: #ef4444; --blue: #3b82f6;
-        }
-        html, body { height: 100%; background: var(--bg); color: var(--t1); font-family: 'Inter', sans-serif; font-size: 13px; overflow-x: hidden; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DLP</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f5f5;--white:#fff;--border:#e2e2e2;
+  --t1:#111;--t2:#555;--t3:#999;--blue:#2563eb;
+  --green:#16a34a;--orange:#ea580c;--red:#dc2626;
+}
+body{height:100%;background:var(--bg);color:var(--t1);font-family:'Inter',sans-serif;font-size:13px;line-height:1.4}
 
-        /* HEADER & NAV */
-        #topbar { position: sticky; top: 0; z-index: 1000; height: 50px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 15px; }
-        #topbar b { font-size: 18px; font-weight: 700; color: var(--blue); letter-spacing: -1px; }
+/* HEADER */
+#h{height:44px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 15px;position:sticky;top:0;z-index:100}
+#h b{font-size:16px;letter-spacing:-0.5px;margin-right:20px}
+.pill{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;background:#eee}
+.pill.live{background:#dcfce7;color:var(--green)}
 
-        #nd { position: sticky; top: 50px; z-index: 900; background: var(--card); border-bottom: 1px solid var(--border); display: flex; width: 100%; }
-        .nt { flex: 1; padding: 14px; font-size: 11px; font-weight: 700; color: var(--t2); border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; text-transform: uppercase; text-align: center; }
-        .nt.active { color: var(--white); border-bottom-color: var(--blue); background: rgba(59,130,246,0.1); }
+/* NAVIGATION GAUCHE */
+#nav-container{display:flex;align-items:center;flex:1}
+.nt{padding:0 12px;height:44px;border:none;background:none;font-size:12px;font-weight:500;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;transition:0.2s}
+.nt:hover{color:var(--t1)}
+.nt.active{color:var(--blue);border-bottom-color:var(--blue)}
 
-        /* CONTENT LAYOUT - FULL WIDTH */
-        .page { display: none; width: 100%; }
-        .page.active { display: block; }
-        .pg { padding: 20px; width: 100%; }
+/* INFOS DROITE */
+#h-right{display:flex;align-items:center;gap:15px;font-size:11px;color:var(--t3);font-weight:500}
+#upd{color:var(--t1);font-weight:600}
 
-        /* MONITORING DASHBOARD */
-        .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 15px; position: relative; }
-        .kl { font-size: 10px; color: var(--t2); text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
-        .kv { font-size: 24px; font-weight: 700; }
-        .ks { font-size: 11px; color: var(--t3); margin-top: 4px; }
+/* LAYOUT */
+.pg{padding:20px;max-width:1400px;margin:0 auto}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px}
+.kpi{background:var(--white);padding:15px;border:1px solid var(--border);border-radius:8px}
+.kpi div:first-child{font-size:10px;text-transform:uppercase;color:var(--t3);font-weight:600;margin-bottom:5px}
+.kpi div:last-child{font-size:22px;font-weight:700}
 
-        .pk-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media(max-width: 1000px) { .pk-row { grid-template-columns: 1fr; } }
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
 
-        .pk { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-        .pk-h { padding: 15px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); font-weight: 700; display: flex; justify-content: space-between; }
+/* CARTES ET LISTES */
+.card{background:var(--white);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.card-h{padding:12px 15px;background:#fafafa;border-bottom:1px solid var(--border);font-weight:600;font-size:12px}
+.land-h{padding:6px 15px;background:#fdfdfd;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--blue);border-bottom:1px solid var(--border)}
 
-        /* LISTS */
-        .lh { padding: 8px 15px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--blue); background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--border); }
-        .ar { display: grid; grid-template-columns: 1fr 80px 60px; align-items:center; padding: 12px 15px; border-bottom: 1px solid var(--border); cursor: pointer; }
-        .ar:hover { background: rgba(255,255,255,0.05); }
-        .an { font-weight: 500; font-size: 13px; }
-        .sr-indent { padding-left: 25px; color: var(--t3); font-size: 11px; font-style: italic; }
-        .aw { text-align: right; font-weight: 700; font-size: 15px; }
+.row{display:grid;grid-template-columns:1fr 60px;align-items:center;padding:10px 15px;border-bottom:1px solid var(--border);cursor:pointer;transition:0.1s}
+.row:hover{background:#f9f9f9}
+.row:last-child{border-bottom:none}
+.row-name{font-weight:500}
+.row-sr{padding-left:20px;font-size:11px;color:var(--t3)}
+.row-wait{text-align:right;font-weight:700;font-size:14px}
 
-        /* DETAIL OVERLAY */
-        #detail-view { position: fixed; inset: 0; z-index: 2000; background: var(--bg); display: none; overflow-y: auto; padding: 40px 20px; }
-        .det-container { max-width: 900px; margin: 0 auto; }
-        .det-back { background: var(--card); border: 1px solid var(--border); color: white; padding: 10px 20px; border-radius: 6px; cursor: pointer; display: inline-block; margin-bottom: 30px; }
-        .det-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
-        @media(max-width: 800px) { .det-grid { grid-template-columns: 1fr; } }
-        .det-card { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 12px; }
+/* DETAIL PANEL */
+#det-panel{position:fixed;right:-400px;top:44px;bottom:0;width:400px;background:var(--white);border-left:1px solid var(--border);z-index:90;transition:0.3s ease;padding:25px;box-shadow:-5px 0 15px rgba(0,0,0,0.05);overflow-y:auto}
+#det-panel.open{right:0}
+.det-close{position:absolute;top:15px;right:15px;cursor:pointer;font-size:20px;color:var(--t3)}
 
-        /* COLORS */
-        .g { color: var(--green); } .y { color: var(--yellow); } .o { color: var(--orange); } .r { color: var(--red); } .d { color: var(--t3); }
-    </style>
+/* COULEURS ATTENTE */
+.w-g{color:var(--green)} .w-y{color:#d97706} .w-o{color:var(--orange)} .w-r{color:var(--red)} .w-d{color:var(--t3)}
+
+.page{display:none} .page.active{display:block}
+</style>
 </head>
 <body>
 
-<div id="topbar">
-    <b>DLP</b>
-    <span id="st-pill" style="padding:3px 10px; border-radius:4px; font-size:10px; font-weight:800; background: var(--orange);">SYNC...</span>
-    <div style="flex:1"></div>
-    <div style="text-align:right">
-        <div id="cdown" style="font-size:10px; color:var(--t3); font-weight:600; text-transform:uppercase">Init...</div>
-        <div id="upd" style="font-size:11px; font-weight:600">--:--:--</div>
-    </div>
-</div>
-
-<nav id="nd">
+<header id="h">
+  <b>DLP</b>
+  <div id="nav-container">
     <button class="nt active" data-p="ov">Console</button>
     <button class="nt" data-p="at">Attractions</button>
     <button class="nt" data-p="ma">Carte Live</button>
     <button class="nt" data-p="st">Statistiques</button>
-</nav>
+  </div>
+  <div id="h-right">
+    <div id="upd">--:--:--</div>
+    <div id="cdown">Prochaine sync : --s</div>
+    <span id="st-pill" class="pill">SYNC...</span>
+  </div>
+</header>
+
+<div id="det-panel">
+  <span class="det-close" onclick="closeDet()">×</span>
+  <p id="det-land" style="font-size:10px; font-weight:700; color:var(--blue); text-transform:uppercase; margin-bottom:5px"></p>
+  <h2 id="det-name" style="font-size:20px; margin-bottom:20px"></h2>
+  <div style="background:var(--bg); padding:20px; border-radius:8px; text-align:center; margin-bottom:25px">
+    <div style="font-size:11px; color:var(--t3); text-transform:uppercase; font-weight:600">Temps d'attente</div>
+    <div id="det-wait" style="font-size:48px; font-weight:800">--</div>
+    <div id="det-status" style="font-size:11px; font-weight:700">--</div>
+  </div>
+  <div style="height:180px; margin-bottom:20px"><canvas id="det-chart"></canvas></div>
+  <div id="det-info" style="font-size:12px; color:var(--t2)"></div>
+</div>
 
 <div class="page active" id="page-ov">
-    <div class="pg">
-        <div class="kpi-row">
-            <div class="kpi"><div class="kl">État du Resort</div><div class="kv" id="k-crowd">--</div><div class="ks">Basé sur l'attente moyenne</div></div>
-            <div class="kpi"><div class="kl">Moyenne Attente</div><div class="kv" id="k-avg">--</div><div class="ks">Minutes de file standby</div></div>
-            <div class="kpi"><div class="kl">Opérationnel</div><div class="kv" id="k-open">--</div><div class="ks" id="k-total">sur -- attractions</div></div>
-            <div class="kpi"><div class="kl">Tendance</div><div class="kv" id="k-trend">STABLE</div><div class="ks">Dernier cycle</div></div>
-        </div>
-
-        <div class="pk-row">
-            <div class="pk">
-                <div class="pk-h"><span>DISNEYLAND PARK</span><span id="h-dlp" class="d">--</span></div>
-                <div id="list-dlp"></div>
-            </div>
-            <div class="pk">
-                <div class="pk-h"><span>DISNEY ADVENTURE WORLD</span><span id="h-daw" class="d">--</span></div>
-                <div id="list-daw"></div>
-            </div>
-        </div>
+  <div class="pg">
+    <div class="kpi-row">
+      <div class="kpi"><div>Affluence</div><div id="k-crowd">--</div></div>
+      <div class="kpi"><div>Moyenne Parc</div><div id="k-avg">--</div></div>
+      <div class="kpi"><div>Ouvertes</div><div id="k-open">--</div></div>
     </div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-h">DISNEYLAND PARK</div>
+        <div id="list-dlp"></div>
+      </div>
+      <div class="card">
+        <div class="card-h">DISNEY ADVENTURE WORLD</div>
+        <div id="list-daw"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="page" id="page-at"><div class="pg"><h3>Liste complète des attractions</h3><p>Contenu en cours de synchronisation...</p></div></div>
-<div class="page" id="page-ma"><div class="pg"><h3>Carte Interactive</h3><p>Chargement des géodonnées...</p></div></div>
-<div class="page" id="page-st"><div class="pg"><h3>Analytiques</h3><p>Données historiques calculées sur 24h.</p></div></div>
-
-<div id="detail-view">
-    <div class="det-container">
-        <div class="det-back" onclick="closeDetail()">← RETOUR AU MONITEUR</div>
-        <div style="margin-bottom: 30px">
-            <h1 id="det-name" style="font-size: 36px; margin-bottom: 5px;">Nom de l'attraction</h1>
-            <p id="det-land" style="color: var(--blue); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">LAND NAME</p>
-        </div>
-        
-        <div class="det-grid">
-            <div class="det-card">
-                <h3 style="margin-bottom: 20px; font-size: 14px; color: var(--t2);">ÉVOLUTION AUJOURD'HUI</h3>
-                <div style="height: 300px;"><canvas id="det-chart"></canvas></div>
-            </div>
-            <div class="det-card">
-                <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px;">
-                    <div class="kl">Temps Actuel</div>
-                    <div id="det-wait" style="font-size: 64px; font-weight: 800;">--</div>
-                    <div id="det-status" style="font-weight: 700;">--</div>
-                </div>
-                <div id="det-stats">
-                    </div>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="page" id="page-at"><div class="pg"><h3>Liste des attractions</h3></div></div>
+<div class="page" id="page-ma"><div class="pg"><h3>Carte Live</h3></div></div>
+<div class="page" id="page-st"><div class="pg"><h3>Statistiques</h3></div></div>
 
 <script>
-    'use strict';
+'use strict';
 
-    // CONFIGURATION DES LANDS (2025)
-    const CONFIG = {
-        dlp: [
-            { id: 2, n: "Indiana Jones™", land: "Adventureland" },
-            { id: 7306, n: "Indiana Jones (Single)", land: "Adventureland", sr: true, pid: 2 },
-            { id: 3, n: "Pirates of the Caribbean", land: "Adventureland" },
-            { id: 8, n: "Star Wars Hyperspace Mtn", land: "Discoveryland" },
-            { id: 7278, n: "Hyperspace Mtn (Single)", land: "Discoveryland", sr: true, pid: 8 },
-            { id: 5, n: "Buzz Lightyear Laser Blast", land: "Discoveryland" },
-            { id: 4, n: "Autopia", land: "Discoveryland" },
-            { id: 9, n: "Star Tours", land: "Discoveryland" },
-            { id: 22, n: "Peter Pan's Flight", land: "Fantasyland" },
-            { id: 19, n: "it's a small world", land: "Fantasyland" },
-            { id: 18, n: "Dumbo the Flying Elephant", land: "Fantasyland" },
-            { id: 25, n: "Big Thunder Mountain", land: "Frontierland" },
-            { id: 26, n: "Phantom Manor", land: "Frontierland" }
-        ],
-        daw: [
-            { id: 10845, n: "Spider-Man W.E.B. Adventure", land: "Avengers Campus" },
-            { id: 10846, n: "Spider-Man (Single)", land: "Avengers Campus", sr: true, pid: 10845 },
-            { id: 10848, n: "Avengers Assemble: Flight Force", land: "Avengers Campus" },
-            { id: 10849, n: "Flight Force (Single)", land: "Avengers Campus", sr: true, pid: 10848 },
-            { id: 40, n: "Tower of Terror", land: "Theater District" },
-            { id: 32, n: "Crush's Coaster", land: "Worlds of Pixar" },
-            { id: 7277, n: "Crush's Coaster (Single)", land: "Worlds of Pixar", sr: true, pid: 32 },
-            { id: 37, n: "Ratatouille: L'Aventure", land: "Worlds of Pixar" },
-            { id: 7279, n: "Ratatouille (Single)", land: "Worlds of Pixar", sr: true, pid: 37 },
-            { id: 34, n: "RC Racer", land: "Worlds of Pixar" },
-            { id: 35, n: "Toy Soldiers Parachute", land: "Worlds of Pixar" },
-            { id: 10851, n: "Frozen Ever After", land: "World of Frozen" },
-            { id: 10852, n: "Frozen (Single)", land: "World of Frozen", sr: true, pid: 10851 },
-            { id: 10853, n: "Raiponce Tangled Spin", land: "Adventure Way" }
-        ]
-    };
+const CONFIG = {
+  dlp: [
+    {id:2, n:"Indiana Jones™", land:"Adventureland"},
+    {id:7306, n:"Indiana Jones (Single)", land:"Adventureland", sr:true, pid:2},
+    {id:3, n:"Pirates of the Caribbean", land:"Adventureland"},
+    {id:8, n:"Star Wars Hyperspace Mtn", land:"Discoveryland"},
+    {id:7278, n:"Hyperspace Mtn (Single)", land:"Discoveryland", sr:true, pid:8},
+    {id:5, n:"Buzz Lightyear Laser Blast", land:"Discoveryland"},
+    {id:25, n:"Big Thunder Mountain", land:"Frontierland"},
+    {id:22, n:"Peter Pan's Flight", land:"Fantasyland"},
+    {id:26, n:"Phantom Manor", land:"Frontierland"}
+  ],
+  daw: [
+    {id:10845, n:"Spider-Man W.E.B. Adventure", land:"Avengers Campus"},
+    {id:10846, n:"Spider-Man (Single)", land:"Avengers Campus", sr:true, pid:10845},
+    {id:10848, n:"Avengers Assemble: Flight Force", land:"Avengers Campus"},
+    {id:32, n:"Crush's Coaster", land:"Worlds of Pixar"},
+    {id:7277, n:"Crush's Coaster (Single)", land:"Worlds of Pixar", sr:true, pid:32},
+    {id:37, n:"Ratatouille: L'Aventure", land:"Worlds of Pixar"},
+    {id:40, n:"Tower of Terror", land:"Production Courtyard"},
+    {id:34, n:"RC Racer", land:"Worlds of Pixar"},
+    {id:31, n:"Slinky Dog Zigzag Spin", land:"Worlds of Pixar"},
+    {id:29, n:"Flying Carpets Over Agrabah", land:"Toon Studio"}
+  ]
+};
 
-    let rides = [], isLive = false, timer = 15, detChart = null;
+let rides = [], timer = 15, isLive = false, myChart = null;
 
-    async function fetchData() {
-        const proxy = "https://api.allorigins.win/get?url=";
-        const urlDlp = encodeURIComponent('https://queue-times.com/parks/4/queue_times.json');
-        const urlDaw = encodeURIComponent('https://queue-times.com/parks/28/queue_times.json');
+async function refresh() {
+  const proxy = "https://api.allorigins.win/get?url=";
+  const u1 = encodeURIComponent('https://queue-times.com/parks/4/queue_times.json');
+  const u2 = encodeURIComponent('https://queue-times.com/parks/28/queue_times.json');
 
-        try {
-            const [res1, res2] = await Promise.all([fetch(proxy + urlDlp), fetch(proxy + urlDaw)]);
-            const d1 = JSON.parse((await res1.json()).contents);
-            const d2 = JSON.parse((await res2.json()).contents);
-            
-            const allRidesApi = [...extractRides(d1), ...extractRides(d2)];
-            
-            rides = [...CONFIG.dlp, ...CONFIG.daw].map(c => {
-                const apiData = allRidesApi.find(r => r.id === c.id);
-                return {
-                    ...c,
-                    park: CONFIG.dlp.includes(c) ? 'dlp' : 'daw',
-                    wait: apiData ? apiData.wait_time : 0,
-                    is_open: apiData ? apiData.is_open : false
-                };
-            });
-            isLive = true;
-        } catch (e) {
-            console.error("Erreur API, mode démo activé.");
-            loadDemo();
-            isLive = false;
-        }
-        updateUI();
-    }
+  try {
+    const [r1, r2] = await Promise.all([fetch(proxy+u1), fetch(proxy+u2)]);
+    const d1 = JSON.parse((await r1.json()).contents);
+    const d2 = JSON.parse((await r2.json()).contents);
+    const all = [...(d1.rides||[]), ...(d2.rides||[])];
+    [d1, d2].forEach(p => p.lands?.forEach(l => all.push(...l.rides)));
 
-    function extractRides(data) {
-        let r = data.rides || [];
-        if(data.lands) data.lands.forEach(l => r.push(...l.rides));
-        return r;
-    }
-
-    function loadDemo() {
-        rides = [...CONFIG.dlp, ...CONFIG.daw].map(c => ({
-            ...c,
-            park: CONFIG.dlp.includes(c) ? 'dlp' : 'daw',
-            wait: Math.floor(Math.random() * 70),
-            is_open: Math.random() > 0.1
-        }));
-    }
-
-    function updateUI() {
-        document.getElementById('upd').textContent = new Date().toLocaleTimeString();
-        document.getElementById('st-pill').textContent = isLive ? "LIVE 15S" : "DEMO MODE";
-        document.getElementById('st-pill').style.background = isLive ? "var(--green)" : "var(--orange)";
-
-        renderKPIs();
-        renderPark('dlp', 'list-dlp');
-        renderPark('daw', 'list-daw');
-    }
-
-    function renderKPIs() {
-        const open = rides.filter(r => r.is_open && !r.sr);
-        const avg = open.length ? Math.round(open.reduce((a,b) => a + b.wait, 0) / open.length) : 0;
-        
-        document.getElementById('k-avg').textContent = avg + " min";
-        document.getElementById('k-open').textContent = open.length;
-        document.getElementById('k-total').textContent = `sur ${rides.filter(r=>!r.sr).length}`;
-        document.getElementById('k-crowd').textContent = avg > 45 ? "Saturé" : avg > 25 ? "Élevé" : "Fluide";
-        document.getElementById('k-crowd').className = 'kv ' + (avg > 45 ? 'r' : avg > 25 ? 'o' : 'g');
-    }
-
-    function renderPark(pCode, target) {
-        const container = document.getElementById(target);
-        const parkRides = rides.filter(r => r.park === pCode && !r.sr);
-        const lands = [...new Set(parkRides.map(r => r.land))];
-
-        let html = "";
-        lands.forEach(l => {
-            html += `<div class="lh">${l}</div>`;
-            parkRides.filter(r => r.land === l).forEach(r => {
-                html += `
-                    <div class="ar" onclick="openDetail(${r.id})">
-                        <div class="an">${r.n}</div>
-                        <div class="ks">${r.is_open ? 'OUVERT' : '<span class="r">FERMÉ</span>'}</div>
-                        <div class="aw ${getWaitColor(r.wait)}">${r.is_open ? r.wait : '--'}</div>
-                    </div>`;
-                // Affichage Single Rider si présent
-                const sr = rides.find(s => s.sr && s.pid === r.id);
-                if(sr) {
-                    html += `
-                    <div class="ar" onclick="openDetail(${sr.id})">
-                        <div class="an sr-indent">↳ Single Rider</div>
-                        <div class="ks">${sr.is_open ? 'OUVERT' : 'FERMÉ'}</div>
-                        <div class="aw ${getWaitColor(sr.wait)}">${sr.is_open ? sr.wait : '--'}</div>
-                    </div>`;
-                }
-            });
-        });
-        container.innerHTML = html;
-    }
-
-    function getWaitColor(w) {
-        if(w < 15) return 'g'; if(w < 35) return 'y'; if(w < 55) return 'o'; return 'r';
-    }
-
-    // DETAIL LOGIC
-    function openDetail(id) {
-        const r = rides.find(x => x.id === id);
-        document.getElementById('detail-view').style.display = 'block';
-        document.getElementById('det-name').textContent = r.n;
-        document.getElementById('det-land').textContent = r.land;
-        document.getElementById('det-wait').textContent = r.is_open ? r.wait + " min" : "FERMÉ";
-        document.getElementById('det-wait').className = getWaitColor(r.wait);
-        document.getElementById('det-status').textContent = r.is_open ? "ATTRACTION OPÉRATIONNELLE" : "ATTRACTION FERMÉE";
-        document.getElementById('det-status').className = r.is_open ? 'g' : 'r';
-
-        initChart(r);
-    }
-
-    function closeDetail() { document.getElementById('detail-view').style.display = 'none'; }
-
-    function initChart(r) {
-        const ctx = document.getElementById('det-chart').getContext('2d');
-        if(detChart) detChart.destroy();
-        detChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['08h', '10h', '12h', '14h', '16h', '18h', '20h'],
-                datasets: [{
-                    label: 'Minutes',
-                    data: [r.wait-10, r.wait+5, r.wait+20, r.wait+15, r.wait, r.wait+10, r.wait-5],
-                    borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59,130,246,0.1)'
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-        });
-    }
-
-    // TABS
-    document.querySelectorAll('.nt').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.nt').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-' + btn.dataset.p).classList.add('active');
-        };
+    rides = [...CONFIG.dlp, ...CONFIG.daw].map(c => {
+      const live = all.find(x => x.id === c.id);
+      return {...c, wait: live?live.wait_time:0, open: live?live.is_open:false};
     });
+    isLive = true;
+  } catch(e) {
+    rides = [...CONFIG.dlp, ...CONFIG.daw].map(c => ({...c, wait: Math.floor(Math.random()*40), open: true}));
+    isLive = false;
+  }
+  render();
+}
 
-    // TIMER SYSTEM
-    setInterval(() => {
-        timer--;
-        if(timer <= 0) {
-            fetchData();
-            timer = 15;
-            document.getElementById('cdown').textContent = "SYNC...";
-        } else {
-            document.getElementById('cdown').textContent = `NEXT SYNC: ${timer}S`;
-        }
-    }, 1000);
+function render() {
+  document.getElementById('upd').textContent = new Date().toLocaleTimeString();
+  const pill = document.getElementById('st-pill');
+  pill.textContent = isLive ? "LIVE" : "DEMO";
+  pill.className = isLive ? "pill live" : "pill";
 
-    fetchData();
+  renderList('dlp', 'list-dlp');
+  renderList('daw', 'list-daw');
+  
+  const op = rides.filter(r => r.open && !r.sr);
+  const avg = op.length ? Math.round(op.reduce((a,b)=>a+b.wait,0)/op.length) : 0;
+  document.getElementById('k-avg').textContent = avg + " min";
+  document.getElementById('k-open').textContent = op.length;
+  document.getElementById('k-crowd').textContent = avg > 30 ? "Élevée" : "Calme";
+}
+
+function renderList(p, target) {
+  const cont = document.getElementById(target);
+  const parkRides = rides.filter(r => r.park === p && !r.sr);
+  const lands = [...new Set(parkRides.map(r => r.land))];
+  let h = "";
+  lands.forEach(l => {
+    h += `<div class="land-h">${l}</div>`;
+    parkRides.filter(r => r.land === l).forEach(r => {
+      h += `<div class="row" onclick="openDet(${r.id})">
+        <div class="row-name">${r.n}</div>
+        <div class="row-wait ${getWCl(r.wait)}">${r.open?r.wait:'--'}</div>
+      </div>`;
+      const sr = rides.find(s => s.sr && s.pid === r.id);
+      if(sr) h += `<div class="row" onclick="openDet(${sr.id})">
+        <div class="row-name row-sr">↳ Single Rider</div>
+        <div class="row-wait ${getWCl(sr.wait)}">${sr.open?sr.wait:'--'}</div>
+      </div>`;
+    });
+  });
+  cont.innerHTML = h;
+}
+
+function getWCl(w) { return w<15?'w-g':w<35?'w-y':w<55?'w-o':'w-r'; }
+
+function openDet(id) {
+  const r = rides.find(x => x.id === id);
+  const p = document.getElementById('det-panel');
+  p.classList.add('open');
+  document.getElementById('det-name').textContent = r.n;
+  document.getElementById('det-land').textContent = r.land;
+  document.getElementById('det-wait').textContent = r.open ? r.wait + " min" : "Fermé";
+  document.getElementById('det-wait').className = getWCl(r.wait);
+  document.getElementById('det-status').textContent = r.open ? "OUVERT" : "INDISPONIBLE";
+  document.getElementById('det-status').style.color = r.open ? "var(--green)" : "var(--red)";
+  
+  if(myChart) myChart.destroy();
+  const ctx = document.getElementById('det-chart').getContext('2d');
+  myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['10h','12h','14h','16h','18h','20h'],
+      datasets: [{
+        data: [Math.max(0, r.wait-10), r.wait+5, r.wait, Math.max(0, r.wait-5), r.wait+10, r.wait],
+        borderColor: '#2563eb', tension: 0.3, fill: false, pointRadius: 0
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+}
+
+function closeDet() { document.getElementById('det-panel').classList.remove('open'); }
+
+// NAV
+document.querySelectorAll('.nt').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('.nt').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+    document.getElementById('page-'+b.dataset.p).classList.add('active');
+  }
+});
+
+// TIMER
+setInterval(() => {
+  timer--;
+  if(timer <= 0) { timer = 15; refresh(); }
+  document.getElementById('cdown').textContent = `Prochaine sync : ${timer}s`;
+}, 1000);
+
+refresh();
 </script>
 </body>
 </html>
