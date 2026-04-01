@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DLP Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f5f5;--white:#fff;--border:#e2e2e2;--border2:#c8c8c8;
+  --t1:#111;--t2:#555;--t3:#999;
+  --green:#16a34a;--yellow:#d97706;--orange:#ea580c;--red:#dc2626;--blue:#2563eb;
+}
+html,body{height:100%;background:var(--bg);color:var(--t1);font-family:'Inter',system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
+
+/* TOPBAR */
+#topbar{position:sticky;top:0;z-index:100;height:44px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:10px}
+#topbar b{font-size:14px;font-weight:600}
+.pill{font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;border:1px solid;text-transform:uppercase;letter-spacing:.04em}
+.pill.live{background:#f0fdf4;border-color:#86efac;color:var(--green)}
+.pill.demo{background:#fffbeb;border-color:#fcd34d;color:var(--yellow)}
+.sp{flex:1}
+#cdown,#upd{font-size:11px;color:var(--t3)}
+#btn-r{font-size:12px;padding:4px 10px;border:1px solid var(--border2);border-radius:3px;background:var(--white);cursor:pointer;display:flex;align-items:center;gap:5px;color:var(--t2)}
+#btn-r:hover{background:var(--bg)}
+#btn-r.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* NAV DESKTOP */
+#nd{position:sticky;top:44px;z-index:90;background:var(--white);border-bottom:1px solid var(--border);display:flex;padding:0 12px;gap:2px}
+.nt{padding:10px 14px;font-size:12px;font-weight:500;color:var(--t2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.nt:hover{color:var(--t1)}
+.nt.active{color:var(--blue);border-bottom-color:var(--blue)}
+.nt .c{margin-left:4px;font-size:10px;color:var(--t3)}
+
+/* NAV MOBILE */
+#nm{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--white);border-top:1px solid var(--border);height:52px}
+.nm-in{display:flex;height:100%}
+.mt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--t3)}
+.mt svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.mt.active{color:var(--blue)}
+@media(max-width:600px){#nd{display:none}#nm{display:block}body{padding-bottom:52px}}
+
+/* PAGES */
+.page{display:none}.page.active{display:block}
+.pg{padding:12px;max-width:1300px}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+@media(max-width:600px){.kpi-row{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--white);border:1px solid var(--border);border-radius:4px;padding:10px 12px}
+.kl{font-size:11px;color:var(--t2);margin-bottom:3px}
+.kv{font-size:22px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.ks{font-size:11px;color:var(--t3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kv.g{color:var(--green)}.kv.y{color:var(--yellow)}.kv.o{color:var(--orange)}.kv.r{color:var(--red)}
+
+/* PARK COLS */
+.pk-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:800px){.pk-row{grid-template-columns:1fr}}
+.pk{background:var(--white);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.pk-h{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg);gap:8px}
+.pk-title{font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.pk-meta{font-size:11px;color:var(--t2)}
+.bop{font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;background:#f0fdf4;border:1px solid #86efac;color:var(--green);text-transform:uppercase}
+.bcl{font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;background:#fef2f2;border:1px solid #fca5a5;color:var(--red);text-transform:uppercase}
+.pk-sum{display:flex;border-bottom:1px solid var(--border);font-size:12px}
+.ps{flex:1;text-align:center;padding:6px 4px;border-right:1px solid var(--border)}
+.ps:last-child{border-right:none}
+.ps strong{display:block;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* LAND / ATT */
+.lh{padding:5px 12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);background:var(--bg);border-bottom:1px solid var(--border)}
+.ar{display:grid;grid-template-columns:1fr auto 62px;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer}
+.ar:hover{background:#fafafa}
+.ar:last-child{border-bottom:none}
+.ar.cl-row{opacity:.5}
+.an{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.an.sr{font-size:11px;color:var(--t2);padding-left:12px}
+.an.sr::before{content:"↳ ";color:var(--t3)}
+.as{font-size:10px;font-weight:600;text-transform:uppercase;white-space:nowrap}
+.as.op{color:var(--green)}.as.cl{color:var(--red)}
+.aw{font-size:13px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.aw.g{color:var(--green)}.aw.y{color:var(--yellow)}.aw.o{color:var(--orange)}.aw.r{color:var(--red)}.aw.d{color:var(--t3);font-weight:400}
+
+/* TABLE */
+.fbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.fi{padding:6px 10px;border:1px solid var(--border);border-radius:3px;font-size:12px;background:var(--white);color:var(--t1);outline:none;font-family:inherit}
+.fi:focus{border-color:var(--blue)}
+#fi-search{flex:1;min-width:160px}
+.ptabs{display:flex;border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.ptab{padding:6px 12px;background:var(--white);border:none;border-right:1px solid var(--border);font-size:12px;cursor:pointer;color:var(--t2);font-family:inherit}
+.ptab:last-child{border-right:none}
+.ptab.active{background:var(--blue);color:white;font-weight:500}
+.tw{background:var(--white);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.th,.tr{display:grid;grid-template-columns:32px 1fr 100px 80px 70px 110px;gap:8px;padding:7px 12px;align-items:center}
+.th{background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3)}
+.tr{border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer}
+.tr:last-child{border-bottom:none}
+.tr:hover{background:#fafafa}
+.tr.cl-r{opacity:.55}
+.ptag{font-size:10px;font-weight:600;padding:2px 6px;border-radius:2px;border:1px solid;white-space:nowrap}
+.ptag.dlp{background:#eff6ff;border-color:#93c5fd;color:var(--blue)}
+.ptag.daw{background:#faf5ff;border-color:#d8b4fe;color:#7c3aed}
+@media(max-width:600px){.th,.tr{grid-template-columns:28px 1fr 70px 60px}.th>*:nth-child(n+5),.tr>*:nth-child(n+5){display:none}}
+
+/* MAP */
+#mc{background:var(--white);border:1px solid var(--border);border-radius:4px;overflow:hidden;height:calc(100vh - 44px - 38px - 56px);min-height:420px;position:relative}
+@media(max-width:600px){#mc{height:calc(100vh - 44px - 52px - 56px)}}
+#dlp-map{width:100%;height:100%}
+.mleg{position:absolute;bottom:16px;left:12px;z-index:1000;background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-size:11px;pointer-events:none}
+.mleg h4{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:7px}
+.lr{display:flex;align-items:center;gap:7px;margin-bottom:4px;color:var(--t2)}
+.lr:last-child{margin-bottom:0}
+.ld{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.leaflet-popup-content-wrapper{border-radius:4px!important;font-family:'Inter',sans-serif!important}
+.leaflet-popup-content{font-size:12px!important;margin:10px 12px!important}
+
+/* HISTORY */
+.hc{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+#hist-ride{flex:1;min-width:200px;max-width:400px}
+#hist-date{width:155px}
+.hk{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+@media(max-width:600px){.hk{grid-template-columns:1fr 1fr}}
+.hcw{background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px}
+.ct{font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.ca{position:relative;height:260px}
+
+/* STATS */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:800px){.sg{grid-template-columns:1fr}}
+.sc{background:var(--white);border:1px solid var(--border);border-radius:4px;padding:12px}
+.sl{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px}
+.sl:last-child{border-bottom:none}
+.sl span:last-child{color:var(--t2);font-variant-numeric:tabular-nums}
+
+/* MSG */
+.msg{padding:9px 12px;border-radius:3px;font-size:12px;margin-bottom:10px;border:1px solid}
+.msg.ok{background:#f0fdf4;border-color:#86efac;color:var(--green)}
+.msg.warn{background:#fffbeb;border-color:#fcd34d;color:var(--yellow)}
+.msg.err{background:#fef2f2;border-color:#fca5a5;color:var(--red)}
+.empty{padding:20px;text-align:center;color:var(--t3);font-size:12px}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <b>DLP Monitor</b>
+  <span class="pill demo" id="spill">demo</span>
+  <span class="sp"></span>
+  <span id="cdown"></span>
+  <span id="upd"></span>
+  <button id="btn-r" onclick="doRefresh()">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+    Actualiser
+  </button>
+</div>
+
+<nav id="nd">
+  <button class="nt active" data-p="ov">Tableau de bord</button>
+  <button class="nt" data-p="at">Attractions <span class="c" id="cnt"></span></button>
+  <button class="nt" data-p="ma">Carte</button>
+  <button class="nt" data-p="hi">Historique</button>
+  <button class="nt" data-p="st">Statistiques</button>
+</nav>
+
+<nav id="nm"><div class="nm-in">
+  <button class="mt active" data-p="ov"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Tableau</button>
+  <button class="mt" data-p="at"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Attractions</button>
+  <button class="mt" data-p="ma"><svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Carte</button>
+  <button class="mt" data-p="hi"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Historique</button>
+  <button class="mt" data-p="st"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Stats</button>
+</div></nav>
+
+<!-- OVERVIEW -->
+<div class="page active" id="page-ov"><div class="pg">
+  <div id="ban" class="msg warn" style="margin-bottom:10px">Chargement…</div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kl">Disneyland Park</div><div class="kv" id="k1">—</div><div class="ks" id="k1s">—</div></div>
+    <div class="kpi"><div class="kl">Disney Adventure World</div><div class="kv" id="k2">—</div><div class="ks" id="k2s">—</div></div>
+    <div class="kpi"><div class="kl">Attente moyenne</div><div class="kv" id="k3">—</div><div class="ks">min · attractions ouvertes</div></div>
+    <div class="kpi"><div class="kl">Plus longue attente</div><div class="kv" id="k4">—</div><div class="ks" id="k4s">—</div></div>
+  </div>
+  <div class="pk-row">
+    <div class="pk">
+      <div class="pk-h"><div><div class="pk-title">Disneyland Park</div><div class="pk-meta" id="dh">09:30 – 22:00</div></div><span id="db" class="bop">Ouvert</span></div>
+      <div class="pk-sum"><div class="ps"><strong id="do">—</strong>Ouvertes</div><div class="ps"><strong id="dc">—</strong>Fermées</div><div class="ps"><strong id="da">—</strong>Moy.(min)</div></div>
+      <div id="dl"><div class="empty">Chargement…</div></div>
+    </div>
+    <div class="pk">
+      <div class="pk-h"><div><div class="pk-title">Disney Adventure World</div><div class="pk-meta" id="wh">09:30 – 21:00</div></div><span id="wb" class="bop">Ouvert</span></div>
+      <div class="pk-sum"><div class="ps"><strong id="wo">—</strong>Ouvertes</div><div class="ps"><strong id="wc">—</strong>Fermées</div><div class="ps"><strong id="wa">—</strong>Moy.(min)</div></div>
+      <div id="wl"><div class="empty">Chargement…</div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ATTRACTIONS -->
+<div class="page" id="page-at"><div class="pg">
+  <div class="fbar">
+    <input type="text" class="fi" id="fi-search" placeholder="Rechercher…" oninput="filtTbl()">
+    <select class="fi" id="fi-st" onchange="filtTbl()"><option value="all">Tous statuts</option><option value="open">Ouvert</option><option value="closed">Fermé</option></select>
+    <select class="fi" id="fi-so" onchange="filtTbl()"><option value="wd">Attente ↓</option><option value="wa">Attente ↑</option><option value="na">Nom A–Z</option></select>
+    <div class="ptabs"><button class="ptab active" data-pk="all" onclick="setPk(this)">Tous</button><button class="ptab" data-pk="dlp" onclick="setPk(this)">DLP</button><button class="ptab" data-pk="daw" onclick="setPk(this)">DAW</button></div>
+  </div>
+  <div class="tw">
+    <div class="th"><span>#</span><span>Attraction</span><span>Parc</span><span>Statut</span><span>Attente</span><span>Zone</span></div>
+    <div id="tbl"><div class="empty">Chargement…</div></div>
+  </div>
+</div></div>
+
+<!-- CARTE -->
+<div class="page" id="page-ma"><div class="pg">
+  <div id="mc"><div id="dlp-map"></div>
+    <div class="mleg"><h4>Attente</h4>
+      <div class="lr"><div class="ld" style="background:#16a34a"></div>&lt;15 min</div>
+      <div class="lr"><div class="ld" style="background:#d97706"></div>15–30</div>
+      <div class="lr"><div class="ld" style="background:#ea580c"></div>30–45</div>
+      <div class="lr"><div class="ld" style="background:#dc2626"></div>&gt;45 min</div>
+      <div class="lr"><div class="ld" style="background:#bbb"></div>Fermé</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- HISTORIQUE -->
+<div class="page" id="page-hi"><div class="pg">
+  <div class="hc">
+    <select class="fi" id="hist-ride" onchange="loadHist()"><option value="">— Sélectionner une attraction —</option></select>
+    <input type="date" class="fi" id="hist-date" onchange="loadHist()">
+    <button class="fi" onclick="loadHist()" style="cursor:pointer">Charger</button>
+  </div>
+  <div id="hban"></div>
+  <div class="hk" id="hk" style="display:none">
+    <div class="kpi"><div class="kl">Minimum</div><div class="kv g" id="hmin">—</div></div>
+    <div class="kpi"><div class="kl">Maximum</div><div class="kv r" id="hmax">—</div></div>
+    <div class="kpi"><div class="kl">Moyenne</div><div class="kv" id="havg">—</div></div>
+    <div class="kpi"><div class="kl">Relevés</div><div class="kv" id="hpts">—</div></div>
+  </div>
+  <div class="hcw"><div class="ct" id="hct">Sélectionner une attraction et une date</div><div class="ca"><canvas id="hcanv"></canvas></div></div>
+</div></div>
+
+<!-- STATS -->
+<div class="page" id="page-st"><div class="pg">
+  <div class="sg">
+    <div class="sc"><div class="ct">Distribution des attentes</div><div class="ca"><canvas id="c1"></canvas></div></div>
+    <div class="sc"><div class="ct">Ouvert / Fermé par parc</div><div class="ca"><canvas id="c2"></canvas></div></div>
+  </div>
+  <div class="sg">
+    <div class="sc"><div class="ct">Top 10 attentes actuelles</div><div class="ca" style="height:280px"><canvas id="c3"></canvas></div></div>
+    <div class="sc"><div class="ct">Récapitulatif</div><div id="stbl"></div></div>
+  </div>
+</div></div>
+
+<script>
+'use strict';
+
+// ── CATALOGUE COMPLET (IDs réels queue-times.com) ──────────────────────────
+const CAT = {
+  dlp:[
+    {id:1,   n:"La Cabane des Robinson",                    land:"Adventureland"},
+    {id:2,   n:"Indiana Jones™ and the Temple of Peril",   land:"Adventureland"},
+    {id:7306,n:"Indiana Jones – Single Rider",             land:"Adventureland",sr:true,pid:2},
+    {id:3,   n:"Pirates of the Caribbean",                 land:"Adventureland"},
+    {id:2702,n:"Adventure Isle",                           land:"Adventureland"},
+    {id:2703,n:"Le Passage Enchanté d'Aladdin",            land:"Adventureland"},
+    {id:2704,n:"Pirates' Beach",                           land:"Adventureland"},
+    {id:2705,n:"Pirate Galleon",                           land:"Adventureland"},
+    {id:4,   n:"Autopia, presented by Avis",               land:"Discoveryland"},
+    {id:5,   n:"Buzz Lightyear Laser Blast",               land:"Discoveryland"},
+    {id:6,   n:"Les Mystères du Nautilus",                 land:"Discoveryland"},
+    {id:7,   n:"Orbitron®",                                land:"Discoveryland"},
+    {id:8,   n:"Star Wars Hyperspace Mountain",            land:"Discoveryland"},
+    {id:7278,n:"Star Wars Hyperspace Mtn – Single Rider",  land:"Discoveryland",sr:true,pid:8},
+    {id:9,   n:"Star Tours: The Adventures Continue",      land:"Discoveryland"},
+    {id:4573,n:"Welcome to Starport",                      land:"Discoveryland"},
+    {id:2707,n:"Mickey's PhilharMagic",                    land:"Discoveryland"},
+    {id:19,  n:"it's a small world",                       land:"Fantasyland"},
+    {id:14,  n:"Alice's Curious Labyrinth",                land:"Fantasyland"},
+    {id:15,  n:"Blanche-Neige et les Sept Nains®",         land:"Fantasyland"},
+    {id:17,  n:"Casey Jr. – le Petit Train du Cirque",     land:"Fantasyland"},
+    {id:18,  n:"Dumbo the Flying Elephant",                land:"Fantasyland"},
+    {id:16,  n:"Le Carrousel de Lancelot",                 land:"Fantasyland"},
+    {id:21,  n:"Le Pays des Contes de Fées",               land:"Fantasyland"},
+    {id:23,  n:"Les Voyages de Pinocchio",                 land:"Fantasyland"},
+    {id:20,  n:"Mad Hatter's Tea Cups",                    land:"Fantasyland"},
+    {id:13,  n:"Meet Mickey Mouse",                        land:"Fantasyland"},
+    {id:22,  n:"Peter Pan's Flight",                       land:"Fantasyland"},
+    {id:24,  n:"Princess Pavilion",                        land:"Fantasyland"},
+    {id:2710,n:"La Tanière du Dragon",                     land:"Fantasyland"},
+    {id:25,  n:"Big Thunder Mountain",                     land:"Frontierland"},
+    {id:26,  n:"Phantom Manor",                            land:"Frontierland"},
+    {id:27,  n:"River Rogue Keelboats",                    land:"Frontierland"},
+    {id:28,  n:"Thunder Mesa Riverboat Landing",           land:"Frontierland"},
+    {id:2712,n:"Rustler Roundup Shootin' Gallery",         land:"Frontierland"},
+    {id:2713,n:"Frontierland Playground",                  land:"Frontierland"},
+    {id:11,  n:"Disneyland Railroad Main Street",          land:"Main Street U.S.A."},
+    {id:12,  n:"Main Street Vehicles",                     land:"Main Street U.S.A."},
+  ],
+  daw:[
+    {id:10845,n:"Spider-Man W.E.B. Adventure",             land:"Avengers Campus"},
+    {id:10846,n:"Spider-Man W.E.B. – Single Rider",        land:"Avengers Campus",sr:true,pid:10845},
+    {id:10848,n:"Avengers Assemble: Flight Force",         land:"Avengers Campus"},
+    {id:10849,n:"Avengers Assemble – Single Rider",        land:"Avengers Campus",sr:true,pid:10848},
+    {id:40,   n:"The Twilight Zone Tower of Terror",       land:"Production Courtyard"},
+    {id:29,   n:"Cars ROAD TRIP",                          land:"Production Courtyard"},
+    {id:32,   n:"Crush's Coaster",                         land:"Toon Studio"},
+    {id:7277, n:"Crush's Coaster – Single Rider",          land:"Toon Studio",sr:true,pid:32},
+    {id:31,   n:"Cars Quatre Roues Rallye",                land:"Toon Studio"},
+    {id:33,   n:"Les Tapis Volants – Flying Carpets",      land:"Toon Studio"},
+    {id:37,   n:"Ratatouille : L'Aventure de Rémy",        land:"Toon Studio"},
+    {id:7279, n:"Ratatouille – Single Rider",              land:"Toon Studio",sr:true,pid:37},
+    {id:34,   n:"RC Racer",                                land:"Toon Studio"},
+    {id:7280, n:"RC Racer – Single Rider",                 land:"Toon Studio",sr:true,pid:34},
+    {id:36,   n:"Slinky® Dog Zigzag Spin",                 land:"Toon Studio"},
+    {id:35,   n:"Toy Soldiers Parachute Drop",             land:"Toon Studio"},
+    {id:7281, n:"Toy Soldiers – Single Rider",             land:"Toon Studio",sr:true,pid:35},
+    {id:10851,n:"Frozen Ever After",                       land:"World of Frozen"},
+    {id:10852,n:"Frozen Ever After – Single Rider",        land:"World of Frozen",sr:true,pid:10851},
+    {id:10853,n:"Raiponce Tangled Spin",                   land:"World of Frozen"},
+    {id:10854,n:"Entry to World of Frozen",                land:"World of Frozen"},
+  ]
+};
+
+// ── GPS (vérifiés OSM) ─────────────────────────────────────────────────────
+const GPS={
+  1:[48.8697,2.7778],2:[48.8694,2.7791],3:[48.8697,2.7770],
+  4:[48.8711,2.7813],5:[48.8714,2.7818],6:[48.8716,2.7826],
+  7:[48.8714,2.7821],8:[48.8718,2.7829],9:[48.8717,2.7836],
+  11:[48.8700,2.7779],12:[48.8699,2.7778],13:[48.8704,2.7792],
+  14:[48.8708,2.7791],15:[48.8712,2.7779],16:[48.8706,2.7801],
+  17:[48.8710,2.7787],18:[48.8708,2.7801],19:[48.8715,2.7797],
+  20:[48.8707,2.7790],21:[48.8716,2.7800],22:[48.8713,2.7784],
+  23:[48.8712,2.7790],24:[48.8706,2.7787],25:[48.8690,2.7748],
+  26:[48.8689,2.7742],27:[48.8693,2.7762],28:[48.8693,2.7764],
+  29:[48.8684,2.7817],31:[48.8683,2.7822],32:[48.8678,2.7848],
+  33:[48.8682,2.7835],34:[48.8682,2.7833],35:[48.8679,2.7840],
+  36:[48.8682,2.7826],37:[48.8682,2.7837],40:[48.8675,2.7820],
+  10845:[48.8669,2.7815],10848:[48.8667,2.7824],
+  10851:[48.8686,2.7860],10853:[48.8688,2.7854],
+};
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let rides=[],pkFilt='all',isLive=false;
+let lMap=null,lMrk=[];
+let charts={},hChart=null;
+let cdSec=0,cdInt=null;
+
+// ── PROXIES ────────────────────────────────────────────────────────────────
+const PX=[
+  u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+];
+async function getJSON(url){
+  for(const px of PX){
+    try{
+      const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);
+      const r=await fetch(px(url),{signal:c.signal});
+      clearTimeout(t);
+      if(!r.ok)continue;
+      const txt=await r.text();
+      try{return JSON.parse(txt)}catch{continue}
+    }catch{}
+  }
+  return null;
+}
+
+// ── LOAD ───────────────────────────────────────────────────────────────────
+async function load(){
+  const[d,w]=await Promise.all([
+    getJSON('https://queue-times.com/parks/4/queue_times.json'),
+    getJSON('https://queue-times.com/parks/28/queue_times.json'),
+  ]);
+  if(d&&w){
+    isLive=true;
+    const lv={};
+    for(const src of[d,w]){
+      for(const land of(src.lands||[]))for(const r of(land.rides||[]))lv[r.id]={o:r.is_open,w:r.wait_time||0};
+      for(const r of(src.rides||[]))lv[r.id]={o:r.is_open,w:r.wait_time||0};
+    }
+    rides=[];
+    for(const[pk,arr]of Object.entries(CAT)){
+      for(const r of arr){
+        const v=lv[r.id];
+        rides.push({...r,park:pk,is_open:v?v.o:false,wait_time:v?v.w:0});
+      }
+    }
+  }else{
+    isLive=false;
+    // demo values
+    const dv={1:0,2:20,3:30,4:20,5:35,6:5,7:25,8:40,9:0,11:0,12:0,13:0,14:10,15:15,16:10,17:15,18:30,19:10,20:10,21:10,22:55,23:10,24:0,25:45,26:25,27:0,28:0,
+      10845:40,10846:5,10848:30,10849:15,40:50,29:10,32:75,7277:30,31:10,33:5,37:0,7279:0,34:35,7280:25,36:10,35:25,7281:5,10851:80,10852:20,10853:15,10854:5};
+    rides=[];
+    for(const[pk,arr]of Object.entries(CAT)){
+      for(const r of arr){
+        const w=dv[r.id]??0;
+        rides.push({...r,park:pk,is_open:w>0||[2702,2703,2707,4573,13,24,2710,2712,2713,10854].includes(r.id),wait_time:w});
+      }
+    }
+  }
+  updateTop();renderAll();
+}
+
+function updateTop(){
+  const now=new Date();
+  g('upd').textContent=now.toLocaleTimeString('fr-FR');
+  const p=g('spill');p.textContent=isLive?'live':'démo';p.className='pill '+(isLive?'live':'demo');
+}
+
+// ── RENDER ALL ─────────────────────────────────────────────────────────────
+function renderAll(){
+  g('cnt').textContent=rides.length;
+  renderKPI();renderLists();renderTbl();if(lMap)renderMrk();renderStats();fillHistSel();
+}
+
+// ── KPI ────────────────────────────────────────────────────────────────────
+function renderKPI(){
+  const dlp=rides.filter(r=>r.park==='dlp'),daw=rides.filter(r=>r.park==='daw');
+  const openW=rides.filter(r=>r.is_open&&r.wait_time>0&&!r.sr);
+  const avg=openW.length?Math.round(openW.reduce((s,r)=>s+r.wait_time,0)/openW.length):0;
+  const mx=[...rides].filter(r=>r.is_open).sort((a,b)=>b.wait_time-a.wait_time)[0];
+  const dlpO=dlp.filter(r=>r.is_open).length,dawO=daw.filter(r=>r.is_open).length;
+  sv('k1',dlpO,wc(avg));sv('k1s',`/ ${dlp.length} attractions`);
+  sv('k2',dawO,wc(avg));sv('k2s',`/ ${daw.length} attractions`);
+  sv('k3',avg||'—',wc(avg));
+  sv('k4',mx?mx.wait_time+' min':'—',wc(mx?.wait_time||0));sv('k4s',mx?tr(mx.n||mx.name,26):'—');
+  const b=g('ban');
+  if(isLive){b.className='msg ok';b.textContent=`✓ Données en direct · queue-times.com · ${new Date().toLocaleTimeString('fr-FR')}`;}
+  else{b.className='msg warn';b.innerHTML='⚠ API inaccessible (CORS). Données de démonstration. <a href="https://queue-times.com/parks/4/queue_times.json" target="_blank" style="color:inherit">Ouvrir l\'API directement</a> pour vérifier.';}
+}
+
+// ── PARK LISTS ─────────────────────────────────────────────────────────────
+function renderLists(){
+  [['dlp','dl','do','dc','da'],['daw','wl','wo','wc','wa']].forEach(([pk,listId,opId,clId,avId])=>{
+    const all=rides.filter(r=>r.park===pk&&!r.sr);
+    const op=all.filter(r=>r.is_open),cl=all.filter(r=>!r.is_open);
+    const w=op.filter(r=>r.wait_time>0);
+    const avg=w.length?Math.round(w.reduce((s,r)=>s+r.wait_time,0)/w.length):0;
+    g(opId).textContent=op.length;g(clId).textContent=cl.length;g(avId).textContent=avg||'—';
+    const lands=[...new Set(all.map(r=>r.land))];
+    let h='';
+    for(const land of lands){
+      const lr=all.filter(r=>r.land===land).sort((a,b)=>b.is_open-a.is_open||b.wait_time-a.wait_time);
+      h+=`<div class="lh">${land}</div>`;
+      for(const r of lr){
+        const wt=r.is_open?(r.wait_time>0?r.wait_time+' min':'&lt;5 min'):'—';
+        h+=`<div class="ar${r.is_open?'':' cl-row'}" onclick="goHist(${r.id},'${pk}')">
+          <span class="an">${r.n}</span>
+          <span class="as ${r.is_open?'op':'cl'}">${r.is_open?'ouvert':'fermé'}</span>
+          <span class="aw ${wc2(r)}">${wt}</span>
+        </div>`;
+        const sr=rides.find(x=>x.sr&&x.pid===r.id&&x.park===pk);
+        if(sr&&r.is_open){
+          const sw=sr.is_open?(sr.wait_time>0?sr.wait_time+' min':'&lt;5 min'):'—';
+          h+=`<div class="ar${sr.is_open?'':' cl-row'}" onclick="goHist(${sr.id},'${pk}')">
+            <span class="an sr">${sr.n}</span>
+            <span class="as ${sr.is_open?'op':'cl'}">${sr.is_open?'ouvert':'fermé'}</span>
+            <span class="aw ${wc2(sr)}">${sw}</span>
+          </div>`;
+        }
+      }
+    }
+    g(listId).innerHTML=h||'<div class="empty">Aucune donnée</div>';
+  });
+}
+
+// ── TABLE ──────────────────────────────────────────────────────────────────
+function renderTbl(){filtTbl()}
+function filtTbl(){
+  const q=g('fi-search').value.toLowerCase(),st=g('fi-st').value,so=g('fi-so').value;
+  let list=rides.filter(r=>{
+    if(pkFilt!=='all'&&r.park!==pkFilt)return false;
+    if(st==='open'&&!r.is_open)return false;
+    if(st==='closed'&&r.is_open)return false;
+    if(q&&!(r.n||r.name).toLowerCase().includes(q))return false;
+    return true;
+  });
+  if(so==='wd')list.sort((a,b)=>b.wait_time-a.wait_time||(b.is_open?1:0)-(a.is_open?1:0));
+  else if(so==='wa')list.sort((a,b)=>(a.is_open?0:1)-(b.is_open?0:1)||a.wait_time-b.wait_time);
+  else list.sort((a,b)=>(a.n||a.name).localeCompare(b.n||b.name));
+  const el=g('tbl');
+  if(!list.length){el.innerHTML='<div class="empty">Aucun résultat</div>';return}
+  el.innerHTML=list.map((r,i)=>{
+    const wt=r.is_open?(r.wait_time>0?r.wait_time+' min':'&lt;5'):'—';
+    const nm=r.n||r.name;
+    return`<div class="tr${r.is_open?'':' cl-r'}" onclick="goHist(${r.id},'${r.park}')">
+      <span style="color:#999;font-size:11px">${i+1}</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nm}">${r.sr?'↳ ':''}${nm}</span>
+      <span><span class="ptag ${r.park}">${r.park==='dlp'?'DLP':'DAW'}</span></span>
+      <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:${r.is_open?'var(--green)':'var(--red)'}">${r.is_open?'ouvert':'fermé'}</span>
+      <span class="aw ${wc2(r)}" style="font-size:12px">${wt}</span>
+      <span style="font-size:11px;color:#999;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.land||'—'}</span>
+    </div>`;
+  }).join('');
+}
+function setPk(el){pkFilt=el.dataset.pk;document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));el.classList.add('active');filtTbl()}
+
+// ── MAP ────────────────────────────────────────────────────────────────────
+function initMap(){
+  if(lMap)return;
+  lMap=L.map('dlp-map',{center:[48.8698,2.7805],zoom:16});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(lMap);
+  renderMrk();
+}
+function renderMrk(){
+  lMrk.forEach(m=>lMap.removeLayer(m));lMrk=[];
+  rides.filter(r=>!r.sr&&GPS[r.id]).forEach(r=>{
+    const col=wCol(r),sz=r.wait_time>=45?9:r.wait_time>=20?7:6;
+    const icon=L.divIcon({html:`<div style="width:${sz*2}px;height:${sz*2}px;border-radius:50%;background:${col};border:1.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>`,className:'',iconSize:[sz*2,sz*2],iconAnchor:[sz,sz]});
+    const m=L.marker(GPS[r.id],{icon}).addTo(lMap);
+    const nm=r.n||r.name;
+    m.bindPopup(`<b>${nm}</b><br><span style="color:#666;font-size:11px">${r.land}</span><br><br><span style="color:${r.is_open?'var(--green)':'var(--red)'}">●</span> ${r.is_open?'Ouvert':'Fermé'}${r.is_open&&r.wait_time>0?` — <b>${r.wait_time} min</b>`:''}`);
+    lMrk.push(m);
+  });
+}
+
+// ── HISTORY ────────────────────────────────────────────────────────────────
+function fillHistSel(){
+  const sel=g('hist-ride'),today=new Date().toISOString().split('T')[0];
+  if(!g('hist-date').value)g('hist-date').value=today;
+  const sorted=[...rides].sort((a,b)=>(a.n||a.name).localeCompare(b.n||b.name));
+  sel.innerHTML='<option value="">— Sélectionner une attraction —</option>'+
+    sorted.map(r=>{
+      const pk=r.park==='dlp'?4:28,nm=r.n||r.name;
+      return`<option value="${r.id}|${pk}">${nm} (${r.park.toUpperCase()})</option>`;
+    }).join('');
+}
+function goHist(id,pk){
+  switchPg('hi');
+  const sel=g('hist-ride');
+  for(const o of sel.options)if(o.value.startsWith(id+'|')){sel.value=o.value;break}
+  loadHist();
+}
+async function loadHist(){
+  const sel=g('hist-ride'),date=g('hist-date').value;
+  if(!sel.value||!date)return;
+  const[rId,pkId]=sel.value.split('|');
+  const nm=sel.options[sel.selectedIndex].text.replace(/ \(D[LA][PW]\)$/,'');
+  g('hct').textContent=`${nm} — ${date}`;
+  g('hban').className='msg warn';g('hban').textContent='Chargement…';g('hk').style.display='none';
+
+  const url=`https://queue-times.com/parks/${pkId}/rides/${rId}/wait_times.json?date=${date}`;
+  const data=await getJSON(url);
+  let pts=[];
+  if(data){
+    const raw=Array.isArray(data)?data:data.wait_times||data.histories||data.data||[];
+    if(Array.isArray(raw)&&raw.length){
+      pts=raw.map(p=>{
+        const t=new Date(p.recorded_at||p.time||p.timestamp||p.created_at||p.date_time||p.date||'');
+        const w=p.wait_time!==undefined?Number(p.wait_time):(p.value!==undefined?Number(p.value):0);
+        return{t,w};
+      }).filter(p=>!isNaN(p.t?.getTime())&&p.w>=0);
+    }
+  }
+  const demo=!pts.length;
+  if(demo)pts=genDemo(date);
+  const ww=pts.map(p=>p.w).filter(v=>v>=0);
+  if(!ww.length){g('hban').textContent='Aucune donnée disponible.';return}
+  g('hk').style.display='grid';
+  g('hmin').textContent=Math.min(...ww)+' min';g('hmax').textContent=Math.max(...ww)+' min';
+  g('havg').textContent=Math.round(ww.reduce((s,v)=>s+v,0)/ww.length)+' min';g('hpts').textContent=pts.length;
+  g('hban').className=demo?'msg warn':'msg ok';
+  g('hban').textContent=demo?'⚠ Données simulées (queue-times.com requis pour l\'historique réel).':`✓ ${pts.length} relevés chargés depuis queue-times.com`;
+  if(hChart)hChart.destroy();
+  hChart=new Chart(g('hcanv'),{
+    type:'line',data:{
+      labels:pts.map(p=>p.t instanceof Date?p.t.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''),
+      datasets:[{data:ww,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.06)',fill:true,tension:.3,borderWidth:1.5,pointRadius:pts.length<80?2:0,pointHoverRadius:4}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+' min'}}},
+      scales:{x:{grid:{color:'#f0f0f0'},ticks:{maxTicksLimit:14,font:{size:10}}},y:{min:0,grid:{color:'#f0f0f0'},ticks:{callback:v=>v+'m',font:{size:10}}}}}
+  });
+}
+function genDemo(ds){
+  const base=new Date(ds+'T09:00:00'),pts=[];
+  for(let i=0;i<156;i++){
+    const t=new Date(base.getTime()+i*5*60000),h=t.getHours()+t.getMinutes()/60;
+    pts.push({t,w:Math.max(0,Math.round(Math.sin((h-9)/13*Math.PI)*40+10+(Math.random()-.5)*10))});
+  }
+  return pts;
+}
+
+// ── STATS ──────────────────────────────────────────────────────────────────
+function renderStats(){
+  const op=rides.filter(r=>r.is_open&&r.wait_time>0&&!r.sr);
+  const dist=[0,0,0,0,0];
+  op.forEach(r=>{if(r.wait_time<10)dist[0]++;else if(r.wait_time<20)dist[1]++;else if(r.wait_time<30)dist[2]++;else if(r.wait_time<45)dist[3]++;else dist[4]++;});
+  mkC('c1',{type:'bar',data:{labels:['<10','10–20','20–30','30–45','>45'],datasets:[{data:dist,backgroundColor:['#16a34a','#65a30d','#d97706','#ea580c','#dc2626'],borderRadius:2}]},options:{plugins:{legend:{display:false}},scales:{x:{grid:{color:'#f0f0f0'}},y:{grid:{color:'#f0f0f0'},ticks:{stepSize:1}}}}});
+  const dlp=rides.filter(r=>r.park==='dlp'&&!r.sr),daw=rides.filter(r=>r.park==='daw'&&!r.sr);
+  mkC('c2',{type:'doughnut',data:{labels:['DLP Ouvert','DLP Fermé','DAW Ouvert','DAW Fermé'],datasets:[{data:[dlp.filter(r=>r.is_open).length,dlp.filter(r=>!r.is_open).length,daw.filter(r=>r.is_open).length,daw.filter(r=>!r.is_open).length],backgroundColor:['#2563eb','#bfdbfe','#7c3aed','#ddd6fe'],borderColor:'white',borderWidth:2}]},options:{cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}});
+  const top=[...rides].filter(r=>r.is_open&&r.wait_time>0).sort((a,b)=>b.wait_time-a.wait_time).slice(0,10);
+  mkC('c3',{type:'bar',data:{labels:top.map(r=>tr(r.n||r.name,25)),datasets:[{data:top.map(r=>r.wait_time),backgroundColor:top.map(r=>r.park==='dlp'?'#2563eb':'#7c3aed'),borderRadius:2}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:'#f0f0f0'},ticks:{callback:v=>v+'m'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+  const main=rides.filter(r=>!r.sr),opM=main.filter(r=>r.is_open);
+  const ww=main.filter(r=>r.is_open&&r.wait_time>0).map(r=>r.wait_time).sort((a,b)=>a-b);
+  g('stbl').innerHTML=[
+    ['Total attractions (hors SR)',main.length],
+    ['Ouvertes',opM.length],['Fermées',main.filter(r=>!r.is_open).length],
+    ['Lignes Single Rider',rides.filter(r=>r.sr).length],
+    ['Taux d\'ouverture',main.length?Math.round(opM.length/main.length*100)+'%':'—'],
+    ['Attente min',ww.length?ww[0]+' min':'—'],
+    ['Attente médiane',ww.length?ww[Math.floor(ww.length/2)]+' min':'—'],
+    ['Attente max',ww.length?ww[ww.length-1]+' min':'—'],
+    ['Source',isLive?'✓ API live (queue-times.com)':'⚠ Données démo'],
+  ].map(([l,v])=>`<div class="sl"><span>${l}</span><span>${v}</span></div>`).join('');
+}
+function mkC(id,cfg){if(charts[id])charts[id].destroy();const c=g(id);if(!c)return;charts[id]=new Chart(c,{...cfg,options:{responsive:true,maintainAspectRatio:false,...(cfg.options||{})}})}
+
+// ── NAV ────────────────────────────────────────────────────────────────────
+function switchPg(pg){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nt,.mt').forEach(b=>b.classList.toggle('active',b.dataset.p===pg));
+  g('page-'+pg).classList.add('active');
+  if(pg==='ma'){setTimeout(()=>{if(!lMap)initMap();else{lMap.invalidateSize();renderMrk()}},80)}
+  if(pg==='st'){setTimeout(()=>Object.values(charts).forEach(c=>c?.resize?.()),80)}
+}
+document.querySelectorAll('.nt,.mt').forEach(b=>b.addEventListener('click',()=>switchPg(b.dataset.p)));
+
+// ── COUNTDOWN ──────────────────────────────────────────────────────────────
+function startCd(){
+  if(cdInt)clearInterval(cdInt);cdSec=300;
+  cdInt=setInterval(()=>{cdSec--;const m=Math.floor(cdSec/60),s=String(cdSec%60).padStart(2,'0');g('cdown').textContent=`actualisation ${m}:${s}`;if(cdSec<=0)doRefresh()},1000);
+}
+async function doRefresh(){
+  const b=g('btn-r');b.disabled=true;b.classList.add('spin');
+  await load();b.disabled=false;b.classList.remove('spin');startCd();
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function g(id){return document.getElementById(id)}
+function tr(s,n){return s&&s.length>n?s.slice(0,n)+'…':s||''}
+function wc(w){return w<15?'g':w<30?'y':w<45?'o':'r'}
+function wc2(r){if(!r.is_open||r.wait_time===0)return 'd';return wc(r.wait_time)}
+function wCol(r){if(!r.is_open)return'#bbb';if(r.wait_time===0)return'#16a34a';if(r.wait_time<15)return'#16a34a';if(r.wait_time<30)return'#d97706';if(r.wait_time<45)return'#ea580c';return'#dc2626'}
+function sv(id,val,cls){const e=g(id);if(!e)return;e.innerHTML=val;if(cls){e.className=e.className.replace(/\b[gyord]\b/g,'').trim()+' '+cls}}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+Chart.defaults.font.family="'Inter',system-ui,sans-serif";Chart.defaults.font.size=11;Chart.defaults.color='#555';
+load().then(startCd);
+</script>
+</body>
+</html>
