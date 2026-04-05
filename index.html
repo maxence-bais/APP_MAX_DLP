@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DLPops — Disneyland Paris Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f7f6f3;
+  --surface: #ffffff;
+  --surface2: #f2f1ee;
+  --border: #e5e3de;
+  --border2: #d0cec9;
+  --text: #1a1917;
+  --text2: #6b6965;
+  --text3: #9c9a97;
+  --accent: #1a1917;
+  --green: #1a7a4a;
+  --green-bg: #edf7f2;
+  --yellow: #8a6700;
+  --yellow-bg: #fdf7e3;
+  --orange: #c4510a;
+  --orange-bg: #fef3e8;
+  --red: #c02b2b;
+  --red-bg: #fdeaea;
+  --blue: #1b55a8;
+  --blue-bg: #eef3fc;
+  --r: 8px;
+  --r-lg: 12px;
+  --font: 'Instrument Sans', sans-serif;
+  --font-serif: 'Instrument Serif', serif;
+  --font-mono: 'DM Mono', monospace;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+}
+
+html { font-size: 14px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* LAYOUT */
+.shell { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* HEADER */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow);
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--text);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.brand-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+.brand-sub {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  margin-left: 2px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.live-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(26,122,74,0.15);
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: blink 2s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.update-time {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text2);
+  font-size: 12px;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-refresh:hover { background: var(--bg); color: var(--text); border-color: var(--text3); }
+.spin { animation: rotate 0.6s linear; }
+@keyframes rotate { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+
+/* NAV */
+.nav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.nav-btn {
+  padding: 14px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  font-family: var(--font);
+  letter-spacing: 0;
+}
+.nav-btn:hover { color: var(--text); }
+.nav-btn.active { color: var(--text); border-bottom-color: var(--text); }
+
+/* PARK SELECTOR */
+.park-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.park-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: none;
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.15s;
+}
+.park-chip:hover { border-color: var(--text3); color: var(--text); }
+.park-chip.active {
+  background: var(--text);
+  color: white;
+  border-color: var(--text);
+}
+
+/* CONTENT */
+.content { padding: 24px 28px; flex: 1; max-width: 1400px; }
+
+/* PAGES */
+.page { display: none; }
+.page.active { display: block; }
+
+/* KPI GRID */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.kpi-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+}
+.kpi-value {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+.kpi-sub {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+
+/* GRID */
+.grid-main {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* PANELS */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 14px;
+  font-family: var(--font-mono);
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+/* CHART WRAP */
+.chart-wrap { position: relative; width: 100%; height: 220px; }
+.chart-wrap-sm { position: relative; width: 100%; height: 160px; }
+
+/* ATTRACTION LIST */
+.att-list { display: flex; flex-direction: column; gap: 2px; }
+.att-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  transition: background 0.1s;
+  cursor: default;
+}
+.att-row:hover { background: var(--bg); }
+.att-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-open { background: var(--green); }
+.dot-closed { background: #d0cec9; }
+.att-name { font-size: 13px; font-weight: 500; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.att-land { font-size: 10px; color: var(--text3); font-family: var(--font-mono); min-width: 90px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-wrap { width: 64px; height: 4px; background: var(--surface2); border-radius: 2px; }
+.bar-fill { height: 4px; border-radius: 2px; }
+.att-wait { font-size: 12px; font-weight: 600; font-family: var(--font-mono); min-width: 36px; text-align: right; }
+
+.c-green { color: var(--green); }
+.c-yellow { color: var(--yellow); }
+.c-orange { color: var(--orange); }
+.c-red { color: var(--red); }
+.bg-green { background: var(--green); }
+.bg-yellow { background: var(--yellow); }
+.bg-orange { background: var(--orange); }
+.bg-red { background: var(--red); }
+.bg-grey { background: var(--border2); }
+
+/* SCROLL */
+.scroll-list { max-height: 460px; overflow-y: auto; }
+.scroll-list::-webkit-scrollbar { width: 3px; }
+.scroll-list::-webkit-scrollbar-track { background: transparent; }
+.scroll-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* BADGES */
+.badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.badge-open { background: var(--green-bg); color: var(--green); }
+.badge-closed { background: var(--surface2); color: var(--text3); }
+.badge-warn { background: var(--yellow-bg); color: var(--yellow); }
+
+/* DISTRIBUTION */
+.dist-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dist-label { font-size: 11px; color: var(--text2); font-family: var(--font-mono); min-width: 52px; }
+.dist-bar-wrap { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; }
+.dist-bar { height: 6px; border-radius: 3px; transition: width 0.4s ease; }
+.dist-val { font-size: 11px; color: var(--text2); font-family: var(--font-mono); min-width: 20px; text-align: right; }
+
+/* LOADING / ERROR */
+.loading { text-align: center; padding: 40px; color: var(--text3); font-family: var(--font-mono); font-size: 12px; }
+.loading::after { content: ''; animation: dots 1.2s steps(3, end) infinite; }
+@keyframes dots { 0%{content:''} 33%{content:'.'} 66%{content:'..'} 100%{content:'...'} }
+.error-msg { text-align: center; padding: 24px; color: var(--red); font-size: 12px; font-family: var(--font-mono); }
+
+/* HISTORY TABLE */
+.hist-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.hist-table th {
+  color: var(--text3);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.hist-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.hist-table tr:last-child td { border-bottom: none; }
+.hist-table tr:hover td { background: var(--bg); }
+
+/* SEARCH */
+.search-input {
+  width: 200px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--text3); }
+.search-input::placeholder { color: var(--text3); }
+
+/* SEPARATOR */
+.sep { height: 1px; background: var(--border); margin: 14px 0; }
+
+/* FOOTER */
+.footer {
+  padding: 12px 28px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.footer a { color: var(--text2); text-decoration: none; }
+.footer a:hover { color: var(--text); text-decoration: underline; }
+
+/* STATUS ICON */
+.status-err { background: var(--red) !important; }
+
+/* ANIMATION */
+.fade-in { animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .grid-main { grid-template-columns: 1fr; }
+  .content { padding: 16px; }
+  .header { padding: 0 16px; }
+  .nav { padding: 0 16px; }
+  .footer { padding: 10px 16px; }
+}
+@media (max-width: 560px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .brand-sub { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="brand-mark">DLP</div>
+      <div>
+        <span class="brand-name">DLPops</span>
+        <span class="brand-sub">/ Disneyland Paris Monitor</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-pill">
+        <div class="live-dot" id="liveDot"></div>
+        <span>Live</span>
+      </div>
+      <span class="update-time" id="lastUpdate">—</span>
+      <button class="btn-refresh" onclick="refreshData()">
+        <span id="refreshIcon" style="display:inline-block;font-size:13px;">↻</span>
+        Actualiser
+      </button>
+    </div>
+  </header>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <button class="nav-btn active" onclick="switchPage('dashboard',this)">Dashboard</button>
+    <button class="nav-btn" onclick="switchPage('attractions',this)">Attractions</button>
+    <button class="nav-btn" onclick="switchPage('historique',this)">Historique</button>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- PAGE: DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+
+      <div class="park-bar">
+        <button class="park-chip active" onclick="selectPark(4,this)">Disneyland Park</button>
+        <button class="park-chip" onclick="selectPark(28,this)">Disney Adventure World</button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card fade-in">
+          <div class="kpi-label">Ouvertes</div>
+          <div class="kpi-value" id="kpiOpen">—</div>
+          <div class="kpi-sub">sur <span id="kpiTotal">—</span> attractions</div>
+        </div>
+        <div class="kpi-card fade-in" style="animation-delay:.05s">
+          <div class="kpi-label">Attente moyenne</div>
+          <div class="kpi-value c-green" id="kpiAvg">—</div>
+          <div class="kpi-sub">minutes (open only)</div>
+        </div>
+        <div class="kpi-card fade-in" style="animation-delay:.1s">
+          <div class="kpi-label">Plus longue attente</div>
+          <div class="kpi-value c-orange" id="kpiMax">—</div>
+          <div class="kpi-sub" id="kpiMaxName">—</div>
+        </div>
+        <div class="kpi-card fade-in" style="animation-delay:.15s">
+          <div class="kpi-label">Moins d'attente</div>
+          <div class="kpi-value c-green" id="kpiMin">—</div>
+          <div class="kpi-sub" id="kpiMinName">—</div>
+        </div>
+      </div>
+
+      <!-- MAIN GRID -->
+      <div class="grid-main">
+        <div class="panel fade-in" style="animation-delay:.2s">
+          <div class="panel-title">Top 10 — temps d'attente</div>
+          <div class="chart-wrap"><canvas id="waitChart"></canvas></div>
+        </div>
+        <div class="panel fade-in" style="animation-delay:.25s">
+          <div class="panel-title">Distribution (min)</div>
+          <div id="distChart"></div>
+          <div class="sep"></div>
+          <div class="panel-title">Statut des attractions</div>
+          <div id="statusDist"></div>
+          <div class="sep"></div>
+          <div class="panel-title">Score d'affluence</div>
+          <div id="crowdScore"></div>
+        </div>
+      </div>
+
+      <!-- LIST -->
+      <div class="panel fade-in" style="animation-delay:.3s">
+        <div class="panel-header">
+          <div class="panel-title" style="margin:0">Toutes les attractions</div>
+        </div>
+        <div class="scroll-list">
+          <div class="att-list" id="attListMain"><div class="loading">Connexion à Queue-Times</div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PAGE: ATTRACTIONS -->
+    <div id="page-attractions" class="page">
+      <div class="park-bar">
+        <button class="park-chip active" onclick="selectPark2(4,this)">Disneyland Park</button>
+        <button class="park-chip" onclick="selectPark2(28,this)">Disney Adventure World</button>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title" style="margin:0">Toutes les attractions & temps réels</div>
+          <input class="search-input" type="text" id="searchInput" placeholder="Rechercher une attraction…" oninput="filterList(this.value)">
+        </div>
+        <div class="scroll-list">
+          <div class="att-list" id="attListPage"><div class="loading">Chargement</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: HISTORIQUE -->
+    <div id="page-historique" class="page">
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="panel-title">Évolution de l'attente moyenne (session)</div>
+        <div class="chart-wrap-sm"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Journal des relevés</div>
+        <div class="scroll-list" style="max-height:520px;">
+          <table class="hist-table">
+            <thead>
+              <tr>
+                <th>Heure</th>
+                <th>Attraction</th>
+                <th>Parc</th>
+                <th>Attente</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody id="histBody">
+              <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3);font-family:var(--font-mono);font-size:11px;">Actualise le dashboard pour commencer à enregistrer</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <span>DLPops — Disneyland Paris Operations Monitor</span>
+    <span>Données : <a href="https://queue-times.com/" target="_blank">Queue-Times.com</a> · Mise à jour auto toutes les 5 min</span>
+  </footer>
+
+</div>
+
+<script>
+/* ─── STATE ───────────────────────────── */
+let parkId = 4;
+let parkId2 = 4;
+let allRides = [];
+let allRides2 = [];
+let histLog = [];
+let avgHistory = [];
+let waitChartInst = null;
+let trendChartInst = null;
+
+const PROXY = 'https://api.allorigins.win/raw?url=';
+const BASE = 'https://queue-times.com/parks/';
+
+/* ─── UTILS ────────────────────────────── */
+function waitClass(w) {
+  if (!w || w === 0) return 'c-green';
+  if (w <= 20) return 'c-green';
+  if (w <= 40) return 'c-yellow';
+  if (w <= 60) return 'c-orange';
+  return 'c-red';
+}
+function barClass(w) {
+  if (!w || w === 0) return 'bg-green';
+  if (w <= 20) return 'bg-green';
+  if (w <= 40) return 'bg-yellow';
+  if (w <= 60) return 'bg-orange';
+  return 'bg-red';
+}
+function barColor(w) {
+  if (!w || w === 0) return '#1a7a4a';
+  if (w <= 20) return '#1a7a4a';
+  if (w <= 40) return '#8a6700';
+  if (w <= 60) return '#c4510a';
+  return '#c02b2b';
+}
+function waitPct(w) { return Math.min(100, (w / 90) * 100); }
+function now() { return new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+function parkName(id) { return id === 4 ? 'Disneyland Park' : 'Disn. Adv. World'; }
+
+/* ─── DATA ─────────────────────────────── */
+function flatRides(data) {
+  let rides = [];
+  if (data.lands) data.lands.forEach(l => l.rides && l.rides.forEach(r => rides.push({...r, land: l.name})));
+  if (data.rides) data.rides.forEach(r => rides.push({...r, land: ''}));
+  return rides;
+}
+
+async function fetchPark(id) {
+  const url = PROXY + encodeURIComponent(BASE + id + '/queue_times.json');
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return await res.json();
+}
+
+/* ─── RENDER KPIs ──────────────────────── */
+function renderKPIs(rides) {
+  const open = rides.filter(r => r.is_open);
+  document.getElementById('kpiOpen').textContent = open.length;
+  document.getElementById('kpiTotal').textContent = rides.length;
+
+  const waits = open.filter(r => r.wait_time > 0).map(r => r.wait_time);
+  const avg = waits.length ? Math.round(waits.reduce((a,b)=>a+b,0)/waits.length) : 0;
+  document.getElementById('kpiAvg').textContent = avg + ' min';
+
+  const maxR = open.reduce((a,b) => b.wait_time > a.wait_time ? b : a, {wait_time:0, name:'—'});
+  const openWithWait = open.filter(r=>r.wait_time>0);
+  const minR = openWithWait.reduce((a,b) => b.wait_time < a.wait_time ? b : a, {wait_time:999, name:'—'});
+
+  document.getElementById('kpiMax').textContent = maxR.wait_time + ' min';
+  document.getElementById('kpiMaxName').textContent = maxR.name.length > 22 ? maxR.name.slice(0,22)+'…' : maxR.name;
+  document.getElementById('kpiMin').textContent = (minR.wait_time === 999 ? 0 : minR.wait_time) + ' min';
+  document.getElementById('kpiMinName').textContent = minR.name.length > 22 ? minR.name.slice(0,22)+'…' : minR.name;
+
+  return avg;
+}
+
+/* ─── RENDER DISTRIBUTION ──────────────── */
+function renderDistribution(rides) {
+  const open = rides.filter(r => r.is_open && r.wait_time > 0);
+  const bands = [
+    {label:'0–20', count: open.filter(r=>r.wait_time<=20).length, color:'#1a7a4a'},
+    {label:'21–40', count: open.filter(r=>r.wait_time>20&&r.wait_time<=40).length, color:'#8a6700'},
+    {label:'41–60', count: open.filter(r=>r.wait_time>40&&r.wait_time<=60).length, color:'#c4510a'},
+    {label:'60+', count: open.filter(r=>r.wait_time>60).length, color:'#c02b2b'},
+  ];
+  const max = Math.max(...bands.map(b=>b.count), 1);
+  document.getElementById('distChart').innerHTML = bands.map(b=>`
+    <div class="dist-row">
+      <div class="dist-label">${b.label} min</div>
+      <div class="dist-bar-wrap"><div class="dist-bar" style="width:${Math.round(b.count/max*100)}%;background:${b.color}"></div></div>
+      <div class="dist-val">${b.count}</div>
+    </div>`).join('');
+
+  const total = rides.length || 1;
+  const openC = rides.filter(r=>r.is_open).length;
+  const closedC = total - openC;
+  document.getElementById('statusDist').innerHTML = [
+    {label:'Ouvert', count: openC, color:'#1a7a4a'},
+    {label:'Fermé', count: closedC, color:'#d0cec9'},
+  ].map(b=>`
+    <div class="dist-row">
+      <div class="dist-label">${b.label}</div>
+      <div class="dist-bar-wrap"><div class="dist-bar" style="width:${Math.round(b.count/total*100)}%;background:${b.color}"></div></div>
+      <div class="dist-val">${b.count}</div>
+    </div>`).join('');
+
+  const avg = open.length ? Math.round(open.reduce((a,b)=>a+b.wait_time,0)/open.length) : 0;
+  let scoreLabel, scoreColor, scoreWidth;
+  if (avg <= 15) { scoreLabel = 'Faible affluence'; scoreColor = '#1a7a4a'; scoreWidth = 25; }
+  else if (avg <= 30) { scoreLabel = 'Modéré'; scoreColor = '#8a6700'; scoreWidth = 50; }
+  else if (avg <= 50) { scoreLabel = 'Élevé'; scoreColor = '#c4510a'; scoreWidth = 75; }
+  else { scoreLabel = 'Très élevé'; scoreColor = '#c02b2b'; scoreWidth = 95; }
+
+  document.getElementById('crowdScore').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <div style="flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;">
+        <div style="height:8px;border-radius:4px;background:${scoreColor};width:${scoreWidth}%;transition:width .5s;"></div>
+      </div>
+      <div style="font-size:11px;font-family:var(--font-mono);color:var(--text2);min-width:28px;">${avg}m</div>
+    </div>
+    <div style="font-size:11px;color:${scoreColor};font-family:var(--font-mono);">${scoreLabel}</div>`;
+}
+
+/* ─── RENDER BAR CHART ─────────────────── */
+function renderWaitChart(rides) {
+  const top10 = [...rides].filter(r=>r.is_open&&r.wait_time>0).sort((a,b)=>b.wait_time-a.wait_time).slice(0,10);
+  const ctx = document.getElementById('waitChart');
+  if (waitChartInst) { waitChartInst.destroy(); waitChartInst = null; }
+  if (!top10.length) return;
+
+  waitChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top10.map(r => r.name.length > 22 ? r.name.slice(0,22)+'…' : r.name),
+      datasets: [{
+        data: top10.map(r => r.wait_time),
+        backgroundColor: top10.map(r => barColor(r.wait_time) + '22'),
+        borderColor: top10.map(r => barColor(r.wait_time)),
+        borderWidth: 1.5,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ' ' + c.raw + ' min' } }
+      },
+      scales: {
+        x: {
+          grid: { color: '#e5e3de', lineWidth: 0.5 },
+          ticks: { color: '#9c9a97', font: { size: 10, family: 'DM Mono' }, callback: v => v + 'm' },
+          border: { display: false }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: '#6b6965', font: { size: 11, family: 'Instrument Sans' } },
+          border: { display: false }
+        }
+      }
+    }
+  });
+}
+
+/* ─── RENDER LIST ──────────────────────── */
+function renderAttList(rides, targetId) {
+  const el = document.getElementById(targetId);
+  if (!rides.length) { el.innerHTML = '<div class="loading">Aucune donnée</div>'; return; }
+  const sorted = [...rides].sort((a,b) => b.wait_time - a.wait_time);
+  el.innerHTML = sorted.map(r => `
+    <div class="att-row">
+      <div class="att-dot ${r.is_open ? 'dot-open' : 'dot-closed'}"></div>
+      <div class="att-name">${r.name}</div>
+      <div class="att-land">${r.land || ''}</div>
+      ${r.is_open ? `
+        <div class="bar-wrap"><div class="bar-fill ${barClass(r.wait_time)}" style="width:${waitPct(r.wait_time)}%"></div></div>
+        <div class="att-wait ${waitClass(r.wait_time)}">${r.wait_time > 0 ? r.wait_time+'m' : '<span style="font-size:10px;color:var(--text3)">—</span>'}</div>
+      ` : `
+        <div style="flex:1;"></div>
+        <span class="badge badge-closed">Fermé</span>
+      `}
+    </div>`).join('');
+}
+
+/* ─── SEARCH FILTER ────────────────────── */
+function filterList(q) {
+  const src = allRides2.length ? allRides2 : allRides;
+  const filtered = q ? src.filter(r => r.name.toLowerCase().includes(q.toLowerCase())) : src;
+  renderAttList(filtered, 'attListPage');
+}
+
+/* ─── HISTORY ──────────────────────────── */
+function logHistory(rides, pid) {
+  const t = now();
+  rides.filter(r => r.is_open).forEach(r => {
+    histLog.push({ time: t, name: r.name, park: parkName(pid), wait: r.wait_time, open: r.is_open });
+  });
+  renderHistory();
+}
+function renderHistory() {
+  const tbody = document.getElementById('histBody');
+  if (!histLog.length) return;
+  const rows = [...histLog].reverse().slice(0, 150);
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td style="font-family:var(--font-mono);font-size:10px;color:var(--text3);white-space:nowrap;">${r.time}</td>
+      <td style="font-weight:500;">${r.name}</td>
+      <td style="font-size:11px;color:var(--text2);">${r.park}</td>
+      <td style="font-family:var(--font-mono);" class="${waitClass(r.wait)}">${r.wait > 0 ? r.wait+'m' : '—'}</td>
+      <td><span class="badge ${r.open ? 'badge-open' : 'badge-closed'}">${r.open ? 'Ouvert' : 'Fermé'}</span></td>
+    </tr>`).join('');
+}
+
+/* ─── TREND CHART ──────────────────────── */
+function renderTrendChart() {
+  const ctx = document.getElementById('trendChart');
+  if (trendChartInst) { trendChartInst.destroy(); trendChartInst = null; }
+  if (avgHistory.length < 2) return;
+  trendChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: avgHistory.map(p => p.time),
+      datasets: [{
+        data: avgHistory.map(p => p.avg),
+        borderColor: '#1a1917',
+        borderWidth: 1.5,
+        tension: 0.35,
+        pointBackgroundColor: '#1a1917',
+        pointRadius: 3,
+        fill: true,
+        backgroundColor: 'rgba(26,25,23,0.04)',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ' ' + c.raw + ' min' } }
+      },
+      scales: {
+        x: { grid: { color: '#e5e3de', lineWidth:0.5 }, ticks: { color: '#9c9a97', font: { size: 9, family:'DM Mono' } }, border:{display:false} },
+        y: { grid: { color: '#e5e3de', lineWidth:0.5 }, ticks: { color: '#9c9a97', font: { size: 9, family:'DM Mono' }, callback: v => v+'m' }, border:{display:false} }
+      }
+    }
+  });
+}
+
+/* ─── MAIN LOAD ────────────────────────── */
+async function loadDashboard(pid) {
+  document.getElementById('attListMain').innerHTML = '<div class="loading">Connexion à Queue-Times</div>';
+  try {
+    const data = await fetchPark(pid);
+    allRides = flatRides(data);
+    const avg = renderKPIs(allRides);
+    renderDistribution(allRides);
+    renderWaitChart(allRides);
+    renderAttList(allRides, 'attListMain');
+    avgHistory.push({ time: now(), avg });
+    if (avgHistory.length > 30) avgHistory.shift();
+    logHistory(allRides, pid);
+    renderTrendChart();
+    document.getElementById('lastUpdate').textContent = 'Mis à jour : ' + now();
+    document.getElementById('liveDot').style.background = 'var(--green)';
+  } catch(e) {
+    document.getElementById('attListMain').innerHTML = `<div class="error-msg">Erreur : ${e.message}<br><span style="color:var(--text3);font-size:10px">Essaie d'actualiser</span></div>`;
+    document.getElementById('liveDot').style.background = 'var(--red)';
+  }
+}
+
+async function loadAttractions(pid) {
+  document.getElementById('attListPage').innerHTML = '<div class="loading">Chargement</div>';
+  try {
+    const data = await fetchPark(pid);
+    allRides2 = flatRides(data);
+    renderAttList(allRides2, 'attListPage');
+  } catch(e) {
+    document.getElementById('attListPage').innerHTML = `<div class="error-msg">Erreur : ${e.message}</div>`;
+  }
+}
+
+/* ─── UI ACTIONS ───────────────────────── */
+async function refreshData() {
+  const icon = document.getElementById('refreshIcon');
+  icon.classList.add('spin');
+  await loadDashboard(parkId);
+  setTimeout(() => icon.classList.remove('spin'), 700);
+}
+
+function selectPark(id, btn) {
+  parkId = id;
+  btn.closest('.park-bar').querySelectorAll('.park-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadDashboard(id);
+}
+
+function selectPark2(id, btn) {
+  parkId2 = id;
+  btn.closest('.park-bar').querySelectorAll('.park-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadAttractions(id);
+}
+
+function switchPage(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  btn.classList.add('active');
+  if (page === 'attractions' && !allRides2.length) loadAttractions(parkId2);
+}
+
+/* ─── INIT ─────────────────────────────── */
+loadDashboard(parkId);
+setInterval(refreshData, 300000);
+</script>
+</body>
+</html>
